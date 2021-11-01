@@ -6,12 +6,12 @@
 //
 
 import UIKit
+import CoreData
 
 class ListViewController: UIViewController, UITableViewDelegate,UITableViewDataSource {
   
-    
-    
-    
+    var titleList = [String]()
+    var idList = [UUID]()
     
 
     @IBOutlet weak var tableView: UITableView!
@@ -22,6 +22,8 @@ class ListViewController: UIViewController, UITableViewDelegate,UITableViewDataS
         
         navigationController?.navigationBar.topItem?.rightBarButtonItem = UIBarButtonItem(barButtonSystemItem: UIBarButtonItem.SystemItem.add, target: self, action: #selector(addButtonClicked))
         
+        getData()
+        
     }
     @objc func addButtonClicked() {
         performSegue(withIdentifier: "toMapView", sender: nil)
@@ -29,12 +31,40 @@ class ListViewController: UIViewController, UITableViewDelegate,UITableViewDataS
     
     func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         let cell = UITableViewCell()
-        cell.textLabel?.text = "test"
+        cell.textLabel?.text = titleList[indexPath.row]
         return cell
     }
     
     func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
-        return 5
+        return titleList.count
+    }
+    
+    func getData() {
+        let appDelegate = UIApplication.shared.delegate as! AppDelegate
+        let context = appDelegate.persistentContainer.viewContext
+        
+        let request = NSFetchRequest<NSFetchRequestResult>(entityName: "Places")
+        request.returnsObjectsAsFaults = false
+        
+        do{
+            let results = try context.fetch(request)
+            if results.count > 0 {
+                self.titleList.removeAll()
+                self.idList.removeAll()
+                
+                for result in results as! [NSManagedObject] {
+                    if let title = result.value(forKey: "title") as? String {
+                        self.titleList.append(title)
+                    }
+                    if let id = result.value(forKey: "id") as? UUID {
+                        self.idList.append(id)
+                    }
+                    tableView.reloadData()
+                }
+            }
+        } catch {
+            print("error")
+        }
     }
     
 
