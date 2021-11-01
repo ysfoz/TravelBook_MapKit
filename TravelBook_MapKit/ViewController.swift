@@ -10,7 +10,7 @@ import MapKit
 import CoreLocation
 import CoreData
 
-class ViewController: UIViewController,MKMapViewDelegate, CLLocationManagerDelegate {
+class ViewController: UIViewController, MKMapViewDelegate, CLLocationManagerDelegate {
     @IBOutlet weak var mapView: MKMapView!
     @IBOutlet weak var commentField: UITextField!
     @IBOutlet weak var nameField: UITextField!
@@ -20,6 +20,14 @@ class ViewController: UIViewController,MKMapViewDelegate, CLLocationManagerDeleg
     
     var choosenLatitude = Double()
     var choosenLongitude = Double()
+    
+    var selectedTitle = ""
+    var selectedId : UUID?
+    
+    var annotationTitle = ""
+    var annotationSubtitle = ""
+    var annotationLatitude = Double()
+    var annotationLongitude = Double()
     
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -38,6 +46,58 @@ class ViewController: UIViewController,MKMapViewDelegate, CLLocationManagerDeleg
 
         gestureRecognizer.minimumPressDuration = 3
         mapView.addGestureRecognizer(gestureRecognizer)
+        
+        if selectedTitle != "" {
+            //CoreData
+            let appDelegate = UIApplication.shared.delegate as! AppDelegate
+            let context = appDelegate.persistentContainer.viewContext
+            
+            let request = NSFetchRequest<NSFetchRequestResult>(entityName: "Places")
+            let stringUUID = selectedId!.uuidString
+            request.predicate = NSPredicate(format: "id = %@", stringUUID)
+            request.returnsObjectsAsFaults = false
+            do{
+                let results = try context.fetch(request)
+                if results.count > 0 {
+                    for result in results as! [NSManagedObject] {
+                        if let title = result.value(forKey: "title") as? String {
+                            annotationTitle = title
+                            if let subtitle = result.value(forKey: "subtitle") as? String {
+                                annotationSubtitle = subtitle
+                                if let latitude = result.value(forKey: "latitude") as? Double {
+                                    annotationLatitude = latitude
+                                    if let longitude = result.value(forKey: "longitude") as? Double {
+                                       annotationLongitude = longitude
+                                        
+                                       let annotation = MKPointAnnotation()
+                                        annotation.title = annotationTitle
+                                        annotation.subtitle = annotationSubtitle
+                                        let coordinate = CLLocationCoordinate2D(latitude: annotationLatitude, longitude: annotationLongitude)
+                                        annotation.coordinate = coordinate
+                                        mapView.addAnnotation(annotation)
+                                        nameField.text = annotationTitle
+                                        commentField.text = annotationSubtitle
+                                        
+                                        // konum guncelemesi yapmamasi icin , yani annotation secildiginde mevcut konum yerine belirlenen konumu acmasi icn
+                                        locationManeger.stopUpdatingLocation()
+                                        
+                                        let span = MKCoordinateSpan(latitudeDelta: 0.05, longitudeDelta: 0.05)
+                                        let region = MKCoordinateRegion(center: coordinate, span: span)
+                                        mapView.setRegion(region, animated: true)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            } catch {
+                print("error")
+            }
+            
+        }else {
+            // Add New Data
+        }
+        
     }
     @objc func chooseLocation(gestureRecognizer:UILongPressGestureRecognizer) {
         if gestureRecognizer.state == .began {
@@ -57,12 +117,16 @@ class ViewController: UIViewController,MKMapViewDelegate, CLLocationManagerDeleg
     
     // guncel lokasyonlari bir dizi icereinde veriyor.
     func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
+        if selectedTitle == "" {
+            
+        
         //locations olarak bize donen dizinin ilk itemi mevcut konumuuz o yuzden, index 0 i secerek onu  icerisindeki koordinatlara ulasiyoruz.
         let location = CLLocationCoordinate2D(latitude: locations[0].coordinate.latitude, longitude: locations[0].coordinate.longitude)
        // 0.1 degeri kuculdukce zoom orani artiyor
         let span = MKCoordinateSpan(latitudeDelta: 0.1, longitudeDelta: 0.1)
         let region = MKCoordinateRegion(center: location, span: span)
         mapView.setRegion(region, animated: true)
+        }
     }
 
     @IBAction func clickedSaveButton(_ sender: Any) {
@@ -86,6 +150,8 @@ class ViewController: UIViewController,MKMapViewDelegate, CLLocationManagerDeleg
         }
         
     }
+    
+    
     
 }
 

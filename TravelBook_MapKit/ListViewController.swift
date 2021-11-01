@@ -13,6 +13,9 @@ class ListViewController: UIViewController, UITableViewDelegate,UITableViewDataS
     var titleList = [String]()
     var idList = [UUID]()
     
+    var selectedTitle = ""
+    var selectedId : UUID?
+    
 
     @IBOutlet weak var tableView: UITableView!
     override func viewDidLoad() {
@@ -26,6 +29,7 @@ class ListViewController: UIViewController, UITableViewDelegate,UITableViewDataS
         
     }
     @objc func addButtonClicked() {
+        selectedTitle = ""
         performSegue(withIdentifier: "toMapView", sender: nil)
     }
     
@@ -64,6 +68,20 @@ class ListViewController: UIViewController, UITableViewDelegate,UITableViewDataS
             }
         } catch {
             print("error")
+        }
+    }
+    
+    func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
+        selectedTitle = titleList[indexPath.row]
+        selectedId = idList[indexPath.row]
+        performSegue(withIdentifier: "toMapView", sender: nil)
+    }
+    
+    override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
+        if segue.identifier == "toMapView" {
+            let destinationVC = segue.destination as! ViewController
+            destinationVC.selectedTitle = selectedTitle
+            destinationVC.selectedId = selectedId
         }
     }
     
